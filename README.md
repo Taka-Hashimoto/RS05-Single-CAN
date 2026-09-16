@@ -28,12 +28,20 @@ This library is not yet in the library catalog. Add it once on your UNO Q:
    git clone https://github.com/Taka-Hashimoto/RS05-Single-CAN.git ~/RS05SingleCAN
    ```
 
-2. Create or open an App Lab app. In `sketch/sketch.yaml`, add this under `profiles.default`, keeping any existing library entries:
+2. Create an App Lab app. In the **UNO Q terminal**, open its build settings (replace `your-app` with the app's folder name):
+
+   ```sh
+   nano ~/ArduinoApps/your-app/sketch/sketch.yaml
+   ```
+
+   Add the local library under `profiles.default.libraries`, keeping existing entries. If `libraries:` already exists, add only the `- dir:` line beneath it:
 
    ```yaml
        libraries:
          - dir: /home/arduino/RS05SingleCAN
    ```
+
+   Save with **Ctrl+O**, **Enter**, then exit with **Ctrl+X**. This file is edited from the terminal, not the App Lab code editor.
 
 3. Copy [StoppedFeedback](examples/StoppedFeedback/StoppedFeedback.ino) into the app's `sketch/sketch.ino`. Set `0x7F` to your motor's CAN ID, click **Run**, and view the serial output. The example prints the angle in radians with the drive disabled.
 
