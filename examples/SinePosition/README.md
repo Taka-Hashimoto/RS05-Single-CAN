@@ -16,4 +16,4 @@ The sketch disables on motor faults, CAN errors, feedback older than 100 ms, a c
 
 **Motor-side stopping after a CAN disconnection remains unverified.** The D2 button also depends on CAN. Keep a way to disconnect motor power available.
 
-Build-checked for UNO Q with ArduinoCore-zephyr 0.90.0. This sine-wave example has not been run on a motor.
+Built and run on UNO Q with ArduinoCore-zephyr 0.90.0 and the tested RS05 firmware on 2026-09-16. One 20-second cycle completed without a protective abort, and disabled-state feedback was confirmed afterward. Actual angle extrema and tracking error were not recorded.
