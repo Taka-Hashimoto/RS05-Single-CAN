@@ -1,19 +1,15 @@
 # Sine position
 
-Commands one ±90° sine-wave cycle in 20 seconds, centered on the position measured when you start. It then disables the drive. It does not change the motor's zero point.
+Send `r` in the serial monitor to command one ±90° cycle in 20 seconds. The center is the current motor position. The drive starts disabled and is disabled again after the cycle.
 
-1. Follow the [library installation and wiring steps](../../README.md). Use an unloaded shaft with room to turn.
-2. Set the motor ID in `SinePosition.ino`. `LegacyTimeout = true` matches the tested firmware `0x00050003`; see [firmware notes](../../PROTOCOL.md).
-3. Connect a normally open stop button between UNO Q **D2 and GND**. Pressing it requests drive disable over CAN.
-4. Upload the sketch. In App Lab, copy it into `sketch/sketch.ino`, keeping your app's library configuration.
-5. Open the serial monitor and send `r`. One cycle runs, then the result is printed. Send a new `r` to repeat.
+1. Follow the [installation and wiring steps](../../README.md), then use `SinePosition.ino` as your sketch. Set the motor ID (`0x7F`).
+2. Connect a normally open stop button between **D2 and GND**. Use an unloaded shaft with room to turn.
+3. Run the sketch and send `r`. Press the button to stop early. Serial input is only processed while stopped.
 
-The sketch starts disabled. Motion runs entirely on the MCU at 100 Hz. During motion, serial input/output is not processed; use the D2 button to stop early. Closing the monitor does not stop the cycle. It does not restart automatically after a fault.
+Change `Amplitude` (radians), `Period` (seconds), `Kp`, and `Kd` at the top. The timeout setup uses legacy access for the tested firmware `0x00050003`; see [firmware notes](../../PROTOCOL.md).
 
-Adjust `Amplitude` (radians), `CycleMs`, `Kp`, and `Kd` at the top of the sketch. Defaults are Kp = 1 N·m/rad and Kd = 0.1 N·m·s/rad, with zero added torque. Actual travel depends on tracking; ±90° is the target, not a measured guarantee.
+The MCU sends commands at 100 Hz. Faults, stale feedback, CAN errors, delayed control, excessive speed/travel, or estimated PD effort above 0.3 N·m stop the cycle. Actual tracking is not guaranteed. The effort check is not a hardware torque limit.
 
-The sketch disables on motor faults, CAN errors, feedback older than 100 ms, a control interval over 30 ms, speed above 1.5 rad/s, travel beyond ±100°, or estimated PD effort above 0.3 N·m. The effort check uses the latest feedback; it is not a hardware torque limit. A stop is confirmed using fresh disabled-state feedback.
+**CAN-disconnection stopping remains unverified.** The stop button also depends on CAN; keep motor power disconnect accessible. Closing the serial monitor does not stop motion.
 
-**Motor-side stopping after a CAN disconnection remains unverified.** The D2 button also depends on CAN. Keep a way to disconnect motor power available.
-
-Built and run on UNO Q with ArduinoCore-zephyr 0.90.0 and the tested RS05 firmware on 2026-09-16. One 20-second cycle completed without a protective abort, and disabled-state feedback was confirmed afterward. Actual angle extrema and tracking error were not recorded.
+This simplified version is build-checked on UNO Q (core 0.90.0), but has not been driven on hardware. The earlier version completed one cycle and confirmed drive disable; actual angle extrema were not recorded.

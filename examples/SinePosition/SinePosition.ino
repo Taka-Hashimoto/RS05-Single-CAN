@@ -3,144 +3,99 @@
 
 UnoQCan can;
 RobStride05 motor(can, 0x7F);
-constexpr float Pi = 3.14159265358979323846f;
-constexpr float Amplitude = Pi / 2;
-constexpr uint32_t CycleMs = 20000;
-constexpr uint32_t CommandMs = 10;
-constexpr uint32_t FeedbackTimeoutMs = 100;
+constexpr float Amplitude = PI / 2;   // radians: 90 degrees
+constexpr float Period = 20;          // seconds per cycle
 constexpr float Kp = 1.0f;
 constexpr float Kd = 0.1f;
-constexpr float EffortLimit = 0.3f;
-constexpr float SpeedLimit = 1.5f;
-constexpr float TravelLimit = 100 * Pi / 180;
 constexpr int StopPin = 2;
-constexpr bool LegacyTimeout = true;
 bool ready = false;
-const char *result = "idle";
+bool running = false;
+float center;
+uint32_t started, lastCommand;
 
-bool feedbackOk() {
-    motor.update(millis());
-    if (!can.healthy()) { result = "CAN error"; return false; }
-    if (motor.hasFault()) { result = "motor fault"; return false; }
-    if (!motor.hasFeedback() || motor.feedbackAge(millis()) > FeedbackTimeoutMs) {
-        result = "feedback timeout";
-        return false;
-    }
-    return true;
-}
-
-bool stopMotor() {
+bool stop(const char *message) {
+    running = false;
     uint32_t start = millis();
-    uint32_t last = start - 20;
-    bool sent = false;
-    while (millis() - start < 300) {
-        uint32_t now = millis();
-        if (now - last >= 20) {
-            last = now;
-            if (motor.disable()) sent = true;
-        }
-        motor.update(now);
-        if (sent && can.healthy() && motor.hasFeedback() && motor.mode() == 0 &&
-            motor.feedbackAge(now) < 10 && motor.feedbackAge(now) < now - start) return true;
-        delay(1);
+    bool confirmed = false;
+    while (millis() - start < 300 && !confirmed) {
+        bool sent = motor.disable();
+        delay(10);
+        motor.update(millis());
+        confirmed = sent && can.healthy() && motor.hasFeedback() &&
+                    motor.feedbackAge(millis()) < 10 && motor.mode() == 0;
     }
-    return false;
-}
-
-bool prepare() {
-    if (!stopMotor()) { result = "stop not confirmed"; return false; }
-    if (!feedbackOk()) return false;
-    result = "configuration TX failed";
-    if (!motor.selectMotionMode()) return false;
-    delay(10);
-    if (!motor.setCommunicationTimeout(150, LegacyTimeout)) return false;
-    delay(10);
-    if (!motor.requestConfiguration()) return false;
-    uint32_t start = millis();
-    while (millis() - start < 200) {
-        if (!feedbackOk()) return false;
-        if (motor.configurationConfirmed()) return true;
-        delay(1);
-    }
-    result = "configuration not confirmed";
-    return false;
-}
-
-void runSine() {
-    if (!prepare()) return;
-    if (digitalRead(StopPin) == LOW) { result = "stop input active"; return; }
-    float center = motor.position();
-    if (fabsf(center) + TravelLimit > RobStride05::PositionMax) {
-        result = "center too close to position boundary";
-        return;
-    }
-    if (fabsf(motor.velocity()) > 0.1f) { result = "motor is moving"; return; }
-    result = "start TX failed";
-    if (!motor.torque(0)) return;
-    delay(10);
-    if (!motor.enable()) return;
-
-    uint32_t start = millis();
-    uint32_t last = start;
-    bool running = false;
-    result = "cycle complete";
-    while (millis() - start < CycleMs) {
-        uint32_t now = millis();
-        if (digitalRead(StopPin) == LOW) { result = "stop input"; break; }
-        if (!feedbackOk()) break;
-        if (fabsf(motor.velocity()) > SpeedLimit) { result = "speed limit"; break; }
-        if (fabsf(motor.position() - center) > TravelLimit) { result = "travel limit"; break; }
-        if (motor.mode() == 2) running = true;
-        else if (running || now - start > 100) { result = "unexpected motor mode"; break; }
-        if (now - last > 30) { result = "control loop delayed"; break; }
-        if (now - last >= CommandMs) {
-            last = now;
-            float omega = 2 * Pi / (CycleMs * 0.001f);
-            float phase = omega * ((now - start) * 0.001f);
-            float position = center + Amplitude * sinf(phase);
-            float velocity = Amplitude * omega * cosf(phase);
-            // Bound the estimated PD effort; this is not a motor current limit.
-            float effort = Kp * fabsf(position - motor.position()) +
-                           Kd * fabsf(velocity - motor.velocity());
-            if (effort > EffortLimit) { result = "effort limit"; break; }
-            if (!motor.motion(position, velocity, Kp, Kd, 0)) {
-                result = "motion TX failed";
-                break;
-            }
-        }
-        delay(1);
-    }
+    Serial.println(message);
+    Serial.println(confirmed ? "Disabled. Send r to start." : "Stop unconfirmed; remove motor power.");
+    if (!confirmed) ready = false;
+    while (Serial.available()) Serial.read();
+    return confirmed;
 }
 
 void setup() {
     pinMode(StopPin, INPUT_PULLUP);
-    ready = motor.begin();
-    if (ready) ready = stopMotor();
     Serial.begin(115200);
-    Serial.println(ready ? "Stopped. Send r for one +/-90 degree cycle (20 s)." :
-                           "CAN initialization or stop confirmation failed; reset to retry.");
+    if (!motor.begin()) { Serial.println("CAN initialization failed"); return; }
+    if (!stop("Starting disabled")) return;
+    bool configured = motor.selectMotionMode();
+    delay(10);
+    configured = motor.setCommunicationTimeout(150, true) && configured;
+    delay(10);
+    configured = motor.requestConfiguration() && configured;
+    for (int i = 0; i < 20; ++i) {
+        motor.disable();
+        delay(10);
+        motor.update(millis());
+    }
+    ready = configured && motor.configurationConfirmed() && can.healthy();
+    if (!ready) Serial.println("Configuration failed; reset to retry.");
 }
 
 void loop() {
-    static uint32_t lastStop = 0;
     if (!ready) { delay(10); return; }
     motor.update(millis());
-    if (millis() - lastStop >= 100) {
-        lastStop = millis();
-        if (!motor.disable() || !can.healthy()) {
-            ready = false;
-            Serial.println("Stop TX/CAN error; reset to retry.");
-            return;
+    bool feedbackOk = can.healthy() && motor.hasFeedback() &&
+                      motor.feedbackAge(millis()) < 100 && !motor.hasFault();
+
+    if (!running) {
+        if (!motor.disable()) { ready = false; stop("CAN TX failed"); return; }
+        if (Serial.available() && Serial.read() == 'r') {
+            while (Serial.available()) Serial.read();
+            if (!feedbackOk || digitalRead(StopPin) == LOW || fabsf(motor.velocity()) > 0.1f) {
+                Serial.println("Not ready to start");
+                return;
+            }
+            center = motor.position();
+            if (fabsf(center) + Amplitude + 0.175f > RobStride05::PositionMax) {
+                Serial.println("Position too close to boundary");
+                return;
+            }
+            if (!motor.torque(0) || !motor.enable()) { stop("Start TX failed"); return; }
+            started = lastCommand = millis();
+            running = true;
         }
+        delay(10);
+        return;
     }
-    if (Serial.available() && Serial.read() == 'r') {
-        while (Serial.available()) Serial.read();
-        runSine();
-        bool stopped = stopMotor();
-        Serial.println(result);
-        Serial.println(stopped ? "Disabled. Send r to run again." : "STOP NOT CONFIRMED; remove motor power.");
-        if (!stopped) ready = false;
-        while (Serial.available()) Serial.read();
+
+    uint32_t now = millis();
+    float time = (now - started) * 0.001f;
+    if (time >= Period) { stop("Cycle complete"); return; }
+    if (!feedbackOk || digitalRead(StopPin) == LOW || now - lastCommand > 30 ||
+        (time > 0.1f && motor.mode() != 2)) {
+        stop("Stopped: button, feedback, motor mode or CAN error");
+        return;
     }
-    delay(1);
+    if (now - lastCommand < 10) return;
+    lastCommand = now;
+
+    float omega = 2 * PI / Period;
+    float position = center + Amplitude * sinf(omega * time);
+    float velocity = Amplitude * omega * cosf(omega * time);
+    float effort = Kp * fabsf(position - motor.position()) + Kd * fabsf(velocity - motor.velocity());
+    if (effort > 0.3f || fabsf(motor.velocity()) > 1.5f ||
+        fabsf(motor.position() - center) > Amplitude + 0.175f) {
+        stop("Motion limit reached");
+        return;
+    }
+    if (!motor.motion(position, velocity, Kp, Kd, 0)) stop("Motion TX failed");
 }
