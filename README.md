@@ -49,7 +49,7 @@ Tested with App CLI 0.12.1 and ArduinoCore-zephyr 0.90.0. For Arduino IDE, see [
 
 ## Before moving the motor
 
-Your sketch must send commands regularly and stop on faults or lost feedback. Use `disable()` to stop the drive; a zero-torque command does not disable it.
+Use `RS05Motor` from `<RS05_Single_CAN.h>`. It handles setup, periodic commands, and stopping on faults or stale feedback. Your sketch calls `update()` frequently, supplies targets, and explicitly calls `start()` / `stop()`. A zero-torque target does not disable the drive.
 
 **Automatic motor stopping after a CAN disconnection is not verified on the tested firmware.** Do not rely on it as your only way to stop the motor.
 
