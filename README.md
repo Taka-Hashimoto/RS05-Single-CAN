@@ -18,20 +18,26 @@ An unofficial CAN library for **one RobStride 05 motor on Arduino UNO Q**. Uses 
 
 Connect the transceiver's CANH/CANL to the motor. Enable the transceiver according to its documentation and use 120-ohm termination at both ends of the bus. The library sets CAN to 1 Mbps.
 
-## Get started
+## Get started with Arduino App Lab
 
-1. Download this repository using **Code → Download ZIP**.
-2. In Arduino IDE, use **Sketch → Include Library → Add .ZIP Library**. Install **Arduino_RouterBridge** through Library Manager for the example's serial output.
-3. Open **File → Examples → RS05 Single CAN → StoppedFeedback**. Change `0x7F` to your motor's CAN ID.
-4. Select your UNO Q, upload the example, and open the Serial Monitor. It prints the motor angle in radians while keeping the drive disabled.
+This library is not yet in the library catalog. Add it once on your UNO Q:
 
-For Arduino CLI, build from the repository root:
+1. In a terminal **on the UNO Q**, run:
 
-```sh
-arduino-cli compile examples/StoppedFeedback
-```
+   ```sh
+   git clone https://github.com/Taka-Hashimoto/RS05-Single-CAN.git ~/RS05SingleCAN
+   ```
 
-Tested with ArduinoCore-zephyr 0.90.0 and Arduino CLI 1.5.1.
+2. Create or open an App Lab app. In `sketch/sketch.yaml`, add this under `profiles.default`, keeping any existing library entries:
+
+   ```yaml
+       libraries:
+         - dir: /home/arduino/RS05SingleCAN
+   ```
+
+3. Copy [StoppedFeedback](examples/StoppedFeedback/StoppedFeedback.ino) into the app's `sketch/sketch.ino`. Set `0x7F` to your motor's CAN ID, click **Run**, and view the serial output. The example prints the angle in radians with the drive disabled.
+
+Tested with App CLI 0.12.1 and ArduinoCore-zephyr 0.90.0. For Arduino IDE, see [installation instructions](API.md#arduino-ide).
 
 ## Before moving the motor
 

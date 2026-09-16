@@ -3,6 +3,12 @@
 [Getting started](README.md) · [Protocol and firmware details](PROTOCOL.md)
 
 
+## Arduino IDE
+
+Download this repository as a ZIP and install it using **Sketch → Include Library → Add .ZIP Library**. Install **Arduino_RouterBridge** through Library Manager for serial output. Open **File → Examples → RS05 Single CAN → StoppedFeedback**, set the motor ID, select UNO Q, and upload.
+
+## Methods
+
 | Method | Purpose |
 |---|---|
 | `begin()` | Initialize CAN without enabling or configuring the motor |
