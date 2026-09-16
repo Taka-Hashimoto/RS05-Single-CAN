@@ -45,6 +45,8 @@ Your sketch must send commands regularly and stop on faults or lost feedback. Us
 
 **Automatic motor stopping after a CAN disconnection is not verified on the tested firmware.** Do not rely on it as your only way to stop the motor.
 
+For a manually started ±90° motion example, see [SinePosition](examples/SinePosition).
+
 See the [API reference](API.md) for torque and motion commands, and [protocol notes](PROTOCOL.md) for firmware compatibility.
 
 [MIT License](LICENSE)
