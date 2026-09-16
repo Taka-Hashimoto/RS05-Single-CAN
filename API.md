@@ -52,4 +52,3 @@ Run the protocol tests from the repository root on a system with g++:
 Tests compile the real protocol implementation and mock only CAN transmission and reception. They check fixed frames derived from the official specification, conversions, malformed frames and wrong IDs, configuration readback, version replies, and timestamp wraparound.
 
 Hardware tests on 2026-09-16 with UNO Q and RobStride 05 confirmed disabled feedback, small torque commands in both directions, motion commands, and drive disable responses. Test applications and logs are not part of this repository. Low gains left position errors; loaded operation, endurance, and communication-loss stopping remain unverified.
-
