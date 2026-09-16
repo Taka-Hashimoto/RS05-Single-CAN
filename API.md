@@ -71,6 +71,6 @@ Hardware tests on 2026-09-16 with UNO Q and RobStride 05 confirmed disabled feed
 
 ## Arduino IDE
 
-Download this repository as a ZIP and install it using **Sketch → Include Library → Add .ZIP Library**. Install the UNO Q board package (**ArduinoCore-zephyr**). With the tested core 0.90.0, `Arduino_RouterBridge` is included in the board package.
+Download this repository as a ZIP and install it using **Sketch → Include Library → Add .ZIP Library**. Install the UNO Q board package (**ArduinoCore-zephyr**). Install **Arduino_RouterBridge** through Library Manager for serial output.
 
 Open **File → Examples → RS05 Single CAN → StoppedFeedback**, set the motor ID, select UNO Q, and upload. The App Lab setup above was build-checked; the Arduino IDE GUI workflow has not been tested.
